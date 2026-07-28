@@ -61,7 +61,7 @@ Ariadna takes over the routine work, providing:
 
 ### Prerequisites
 
-- A CORS-enabled browser extension (e.g., [Allow CORS](https://chrome.google.com/webstore/detail/allow-cors-access-control/lhobafahddgcelffkeicbaginigeejlc) for Chromium-based browsers)
+- A CORS-enabled browser extension (e.g., [Allow CORS](https://chromewebstore.google.com/detail/allow-cors-access-control/lhobafahddgcelffkeicbaginigeejlf) for Chromium-based browsers)
 
 ### Installation
 
