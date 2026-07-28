@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ариадна</title>
+    <link class="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cstyle%3E.w%7Bstroke:%2371717a;fill:none;stroke-width:2;stroke-linecap:round%7D.t%7Bstroke:%2310b981;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round%7D@media (prefers-color-scheme:dark)%7B.w%7Bstroke:%234b5563%7D.t%7Bstroke:%2334d399%7D%7D%3C/style%3E%3Cpath class='w' d='M4 16C4 9.37 9.37 4 16 4s12 5.37 12 12-5.37 12-12 12'/%3E%3Cpath class='w' d='M8 16c0-4.42 3.58-8 8-8s8 3.58 8 8-3.58 8-8 8'/%3E%3Cpath class='w' d='M12 16c0-2.21 1.79-4 4-4'/%3E%3Cpath class='t' d='M16 16c0 1.1-.9 2-2 2s-4-1.79-4-4 1.79-6 6-6 8 3.58 8 8c0 5.52-4.48 10-10 10h12'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <style>
+        :root {
+            --theme-solid: #059669;
+            --theme-hover: #10b981;
+            --theme-glow-1: rgba(16, 185, 129, 0.6);
+            --theme-glow-2: rgba(45, 212, 191, 0.4);
+            --theme-glow-3: rgba(99, 102, 241, 0.2);
+            --theme-conic-1: #10b981;
+            --theme-conic-2: #06b6d4;
+            --theme-text: #059669;
+            --theme-text-dark: #34d399;
+            --theme-badge-bg: rgba(209, 250, 229, 0.5);
+            --theme-badge-bg-dark: rgba(6, 78, 59, 0.3);
+            --theme-badge-text: #047857;
+            --theme-badge-text-dark: #34d399;
+            --theme-badge-border: rgba(16, 185, 129, 0.2);
+            --theme-badge-border-dark: rgba(16, 185, 129, 0.3);
+        }
+        body { transition: background-color .3s, color .3s, border-color .3s; }
+        details summary::-webkit-details-marker { display: none; }
+        details summary { list-style: none; }
+        #glowBg { opacity: 0; transition: opacity 1.2s cubic-bezier(.16,1,.3,1); }
+        #searchBtnWrapper:hover #glowBg { opacity: 1; transition: opacity .6s cubic-bezier(.25,1,.5,1); }
+        #searchBtn { position: relative; overflow: hidden; background-color: var(--theme-solid); transition: background-color .6s cubic-bezier(.25,1,.5,1), color .3s; }
+        #searchBtn:hover:not(:disabled) { background-color: var(--theme-hover); }
+        #searchBtn::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(75px circle at var(--mouse-x,50%) var(--mouse-y,50%), rgba(255,255,255,.2) 0%, var(--theme-glow-2) 50%, transparent 100%); opacity: 0; transition: opacity .6s cubic-bezier(.25,1,.5,1); pointer-events: none; z-index: 1; }
+        #searchBtn:hover:not(:disabled)::before { opacity: 1; }
+        #searchBtn > span { position: relative; z-index: 10; }
+        #searchBtn:disabled { background-color: #e4e4e7 !important; color: #71717a !important; cursor: not-allowed; transition: background-color .3s, color .3s; }
+        .dark #searchBtn:disabled { background-color: #27272a !important; color: #52525b !important; }
+        #searchBtn:disabled::before { opacity: 0 !important; }
+        #loadingGlow { position: absolute; inset: -3px; border-radius: 9999px; padding: 3px; pointer-events: none; z-index: 0; opacity: 0; overflow: hidden; transition: opacity .8s cubic-bezier(.16,1,.3,1); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+        #loadingGlow > div { animation: spin-v 2.4s cubic-bezier(.76,0,.24,1) infinite; background: conic-gradient(from 0deg, transparent 30%, var(--theme-conic-1) 60%, var(--theme-conic-2) 85%, transparent 100%); }
+        #searchBtn:disabled ~ #loadingGlow { opacity: 1; transition: opacity .3s cubic-bezier(.25,1,.5,1); }
+        #searchBtn:disabled ~ #glowBg { opacity: 0 !important; }
+        @keyframes spin-v { 0% { transform: translate(-50%,-50%) rotate(0); } 100% { transform: translate(-50%,-50%) rotate(360deg); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-results { animation: slideUp .6s cubic-bezier(.16,1,.3,1) forwards; }
+    </style>
+    <script>
+        const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', isDark);
+    </script>
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 min-h-screen text-zinc-800 dark:text-zinc-100 font-sans antialiased transition-colors duration-300">
+
+    <div class="absolute top-6 right-6 z-50">
+        <button id="themeToggle" class="p-2.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-all shadow-sm">
+            <svg id="themeToggleSun" class="hidden w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2H16a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/></svg>
+            <svg id="themeToggleMoon" class="hidden w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+        </button>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 pt-[20vh] pb-24 min-h-screen flex flex-col justify-start">
+        <div class="w-full flex flex-col items-center">
+            <div class="inline-flex items-baseline justify-center relative">
+                <h1 id="logo" class="text-6xl md:text-7xl font-extralight tracking-tight text-zinc-955 dark:text-white select-none cursor-pointer hover:opacity-80 transition-opacity duration-200" title="На главную">Ариадна</h1>
+                <a href="https://yandex-team.ru/profile/felixred" target="_blank" rel="noopener noreferrer" class="text-xs font-light text-zinc-400 dark:text-zinc-600 hover:text-[var(--theme-text)] dark:hover:text-[var(--theme-text-dark)] transition-colors duration-150 absolute left-full ml-2.5 top-1.5" title="Разработчик: felixred@">beta</a>
+            </div>
+
+            <p class="text-zinc-400 dark:text-zinc-555 text-sm md:text-base font-light tracking-wider mt-4 select-none">Поиск портов в лабиринте коммутаций</p>
+
+            <div class="w-full max-w-2xl mt-8 mb-12">
+                <form id="searchForm" class="relative flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 rounded-full p-1.5 pl-5 shadow-sm focus-within:ring-2 focus-within:ring-zinc-200 dark:focus-within:ring-zinc-800 focus-within:border-zinc-300 dark:focus-within:border-zinc-800 transition-all duration-300">
+                    <svg class="w-5 h-5 text-zinc-400 dark:text-zinc-555 shrink-0 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" id="switchInput" placeholder="FQDN, имена или инвентарники коммутаторов" class="w-full px-2 py-3 bg-transparent text-sm md:text-base outline-none border-none text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-555">
+                    
+                    <div id="searchBtnWrapper" class="relative flex items-center shrink-0 group">
+                        <button type="submit" id="searchBtn" class="relative z-10 text-white font-medium text-sm px-6 py-3 rounded-full flex items-center gap-2 shrink-0 shadow-sm transition-all duration-300">
+                            <span>Найти PDU</span>
+                        </button>
+                        <div id="glowBg" class="absolute -inset-[3px] pointer-events-none rounded-full group-hover:opacity-100 blur-[4px] z-0" style="background: radial-gradient(50px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--theme-glow-1) 0%, var(--theme-glow-2) 40%, var(--theme-glow-3) 80%, transparent 100%);"></div>
+                        <div id="loadingGlow">
+                            <div class="absolute top-1/2 left-1/2 w-[350%] aspect-square -translate-x-1/2 -translate-y-1/2"></div>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <details class="group text-xs text-zinc-400 dark:text-zinc-555">
+                        <summary class="cursor-pointer hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors inline-flex items-center gap-1">
+                            <span>Настройки поиска</span>
+                            <svg class="w-3.5 h-3.5 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                        </summary>
+                        <div class="mt-3 p-4 bg-zinc-100/50 dark:bg-zinc-900/40 rounded-xl text-left border border-zinc-200/50 dark:border-zinc-800/30 max-w-md mx-auto space-y-4 animate-fade-in">
+                            <div>
+                                <p class="mb-2 text-zinc-500 dark:text-zinc-400">Режим поиска:</p>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <button type="button" id="mode-pdu" class="px-3 py-1.5 rounded-lg border text-center font-medium bg-white dark:bg-zinc-950 transition-all text-xs focus:outline-none">PDU</button>
+                                    <button type="button" id="mode-switch" class="px-3 py-1.5 rounded-lg border text-center font-medium bg-white dark:bg-zinc-950 transition-all text-xs focus:outline-none">Свитчи</button>
+                                    <button type="button" id="mode-host" class="px-3 py-1.5 rounded-lg border text-center font-medium bg-white dark:bg-zinc-950 transition-all text-xs focus:outline-none">Хосты</button>
+                                    <button type="button" id="mode-console" class="px-3 py-1.5 rounded-lg border text-center font-medium bg-white dark:bg-zinc-950 transition-all text-xs focus:outline-none">Консоль</button>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="mb-2 text-zinc-500 dark:text-zinc-400">Префиксы для поиска совпадений по началу MAC-адреса (через запятую):</p>
+                                <input type="text" id="macPrefixesInput" value="" class="w-full px-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-750">
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorBlock" class="hidden max-w-2xl mx-auto w-full bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-4 mb-8 rounded-xl">
+            <div class="flex gap-3">
+                <span class="text-red-500">⚠️</span>
+                <div>
+                    <p id="errorTitle" class="text-sm font-semibold text-red-800 dark:text-red-400">Произошла ошибка</p>
+                    <p id="errorMessage" class="text-xs text-red-600 dark:text-red-300 mt-1"></p>
+                    <p class="text-[10px] text-zinc-400 dark:text-zinc-555 mt-2 leading-relaxed">* Если это ошибка CORS, убедитесь, что в расширении разрешен доступ к <code class="bg-red-100/50 dark:bg-red-950/50 px-1 py-0.5 rounded">*.yandex-team.ru</code> и <code class="bg-red-100/50 dark:bg-red-950/50 px-1 py-0.5 rounded">*.yandex.net</code>.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsHeader" class="hidden flex justify-between items-center mb-4">
+            <h2 class="text-lg font-light tracking-tight text-zinc-800 dark:text-zinc-200">Результаты поиска</h2>
+            <div class="flex items-center gap-3">
+                <button id="exportBtn" type="button" class="text-xs bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/80 text-zinc-750 dark:text-zinc-300 font-medium px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors shadow-sm flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    <span>Экспорт</span>
+                </button>
+                <span id="totalCountBadge" class="bg-[var(--theme-badge-bg)] dark:bg-[var(--theme-badge-bg-dark)] text-[var(--theme-badge-text)] dark:text-[var(--theme-badge-text-dark)] border border-[var(--theme-badge-border)] dark:border-[var(--theme-badge-border-dark)] text-[11px] font-medium px-2.5 py-1 rounded-full">Найдено: 0</span>
+            </div>
+        </div>
+
+        <div id="resultsBlock" class="hidden space-y-6"></div>
+
+        <div id="noResults" class="hidden bg-white dark:bg-zinc-900 p-12 text-center rounded-2xl border border-zinc-200 dark:border-zinc-800/80">
+            <p class="text-zinc-500 dark:text-zinc-400 text-sm">Устройства с указанными MAC-адресами не обнаружены.</p>
+            <p class="text-zinc-400 dark:text-zinc-555 text-xs mt-1.5">Попробуйте отредактировать префиксы в настройках.</p>
+        </div>
+    </div>
+
+    <div id="exportModal" class="hidden fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl max-w-md w-full shadow-xl overflow-hidden animate-results">
+            <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-white">Параметры экспорта</h3>
+                <button id="closeExportBtn" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <span class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Формат файла:</span>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 flex flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/40 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/60 transition-all [&:has(input:checked)]:border-[var(--theme-solid)] [&:has(input:checked)]:bg-[var(--theme-solid)] [&:has(input:checked)]:text-white">
+                            <input type="radio" name="exportFormat" value="csv" checked class="sr-only">
+                            <span class="text-xs font-semibold">CSV</span>
+                            <span class="text-[9px] opacity-80 mt-0.5">Для Excel</span>
+                        </label>
+                        <label class="cursor-pointer border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 flex flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/40 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/60 transition-all [&:has(input:checked)]:border-[var(--theme-solid)] [&:has(input:checked)]:bg-[var(--theme-solid)] [&:has(input:checked)]:text-white">
+                            <input type="radio" name="exportFormat" value="json" class="sr-only">
+                            <span class="text-xs font-semibold">JSON</span>
+                            <span class="text-[9px] opacity-80 mt-0.5">Объект</span>
+                        </label>
+                        <label class="cursor-pointer border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 flex flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/40 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/60 transition-all [&:has(input:checked)]:border-[var(--theme-solid)] [&:has(input:checked)]:bg-[var(--theme-solid)] [&:has(input:checked)]:text-white">
+                            <input type="radio" name="exportFormat" value="txt" class="sr-only">
+                            <span class="text-xs font-semibold">TXT</span>
+                            <span class="text-[9px] opacity-80 mt-0.5">Табуляция</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Выберите столбцы для экспорта:</span>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <label class="flex items-center gap-2.5 cursor-pointer p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950/40 transition-colors">
+                            <input type="checkbox" name="exportColumn" value="fqdn" checked class="rounded border-zinc-300 dark:border-zinc-700 text-[var(--theme-solid)] focus:ring-[var(--theme-solid)] dark:bg-zinc-900">
+                            <span>FQDN</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 cursor-pointer p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950/40 transition-colors">
+                            <input type="checkbox" name="exportColumn" value="inv" checked class="rounded border-zinc-300 dark:border-zinc-700 text-[var(--theme-solid)] focus:ring-[var(--theme-solid)] dark:bg-zinc-900">
+                            <span>Инвентарник</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 cursor-pointer p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950/40 transition-colors">
+                            <input type="checkbox" name="exportColumn" value="vlan" checked class="rounded border-zinc-300 dark:border-zinc-700 text-[var(--theme-solid)] focus:ring-[var(--theme-solid)] dark:bg-zinc-900">
+                            <span>VLAN</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 cursor-pointer p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950/40 transition-colors">
+                            <input type="checkbox" name="exportColumn" value="mac" checked class="rounded border-zinc-300 dark:border-zinc-700 text-[var(--theme-solid)] focus:ring-[var(--theme-solid)] dark:bg-zinc-900">
+                            <span>MAC</span>
+                        </label>
+                        <label class="col-span-2 flex items-center gap-2.5 cursor-pointer p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950/40 transition-colors">
+                            <input type="checkbox" name="exportColumn" value="port" checked class="rounded border-zinc-300 dark:border-zinc-700 text-[var(--theme-solid)] focus:ring-[var(--theme-solid)] dark:bg-zinc-900">
+                            <span>Порт</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Выберите коммутаторы:</span>
+                        <div class="space-x-2 text-[10px]">
+                            <button id="exportSelectAll" type="button" class="text-[var(--theme-text)] dark:text-[var(--theme-text-dark)] hover:underline">Все</button>
+                            <span class="text-zinc-300 dark:text-zinc-700">|</span>
+                            <button id="exportSelectNone" type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">Ни одного</button>
+                        </div>
+                    </div>
+                    <div id="exportSwitchesList" class="max-h-32 overflow-y-auto border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 space-y-2 bg-zinc-50/30 dark:bg-zinc-950/20 text-xs font-mono"></div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2.5">
+                <button id="cancelExportBtn" type="button" class="text-xs text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 px-4 py-2 rounded-lg font-medium transition-colors">Отмена</button>
+                <button id="confirmExportBtn" type="button" class="text-xs text-white px-4 py-2 rounded-lg font-medium transition-colors" style="background-color: var(--theme-solid)">Скачать файл</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const ui = {
+            btn: $('searchBtn'), wrapper: $('searchBtnWrapper'), results: $('resultsBlock'),
+            noRes: $('noResults'), err: $('errorBlock'), errTitle: $('errorTitle'), errMsg: $('errorMessage'),
+            input: $('switchInput'), prefixes: $('macPrefixesInput'), logo: $('logo'),
+            exportBtn: $('exportBtn'), resultsHeader: $('resultsHeader'), totalCount: $('totalCountBadge')
+        };
+
+        const defaultPools = {
+            pdu: "00e0d8, 2c265f, 00c0b7, 000393, 000d5d, 00208a, 00d0bf, 000a9c, 000abb, 000667, 000c15, 001ec0, 0008dc, 30aea4, 240ac4",
+            switch: "001c73, 748e08, 985d82, 0010db, 0019e2, d404ff, 002688, 00000c, 0010f3, 002a6a, 0002c9, ec0d9a, b8cef6, 00e0fc, 001882, 000f35, 00110a, 001635, 8857ee, 00e02b, e48d8c, 64d154, 0090a6",
+            host: "002590, 003048, ac1f6b, 3cecef, d89d67, ac162d, 001e4f, bc305b, 00155d, 000c29, 005056, 001125, 00145e, 089e01, a41242, 9c7d14, a89a93, 001e68, 1c1b0d, 001b21",
+            console: "0090e8, 000a19, 000ab1, 00e086, 000fd3, 00057e, 0080a3, 00c0ec"
+        };
+
+        const vendorMaps = {
+            pdu: {
+                '00e0d8': 'Rak', '2c265f': 'C3S', '00c0b7': 'APC', '000393': 'APC', '000d5d': 'Raritan',
+                '00208a': 'Eaton', '00d0bf': 'Eaton', '000a9c': 'ServerTech', '000abb': 'Geist',
+                '000667': 'TrippLite', '000c15': 'CyberPower', '001ec0': 'Schroff', '0008dc': 'ServerTech',
+                '30aea4': 'Legrand', '240ac4': 'Raritan'
+            },
+            switch: {
+                '001c73': 'Arista', '748e08': 'Arista', '985d82': 'Arista', '0010db': 'Juniper',
+                '0019e2': 'Juniper', 'd404ff': 'Juniper', '002688': 'Cisco', '00000c': 'Cisco',
+                '0010f3': 'Cisco', '002a6a': 'Cisco', '0002c9': 'Mellanox', 'ec0d9a': 'Mellanox',
+                'b8cef6': 'Mellanox', '00e0fc': 'Huawei', '001882': 'Huawei', '000f35': 'HPE',
+                '00110a': 'HPE', '001635': 'HPE', '8857ee': 'Edge-Core', '00e02b': 'Extreme',
+                'e48d8c': 'Mikrotik', '64d154': 'Mikrotik', '0090a6': 'Cisco'
+            },
+            host: {
+                '002590': 'SMC', '003048': 'SMC', 'ac1f6b': 'SMC', '3cecef': 'HP', 'd89d67': 'HP',
+                'ac162d': 'Dell', '001e4f': 'Dell', 'bc305b': 'Dell', '00155d': 'Hyper-V',
+                '000c29': 'VMware', '005056': 'VMware', '001125': 'IBM', '00145e': 'IBM',
+                '089e01': 'Lenovo', 'a41242': 'Lenovo', '9c7d14': 'Inspur', 'a89a93': 'Inspur',
+                '001e68': 'Quanta', '1c1b0d': 'Gigabyte', '001b21': 'Intel'
+            },
+            console: {
+                '0090e8': 'Moxa', '000a19': 'Moxa', '000ab1': 'Opengear', '00e086': 'Avocent',
+                '000fd3': 'Avocent', '00057e': 'WTI', '0080a3': 'Lantronix', '00c0ec': 'Perle'
+            }
+        };
+
+        const themes = {
+            pdu: {
+                name: 'Найти PDU', solid: '#059669', hover: '#10b981',
+                g1: 'rgba(16, 185, 129, 0.6)', g2: 'rgba(45, 212, 191, 0.4)', g3: 'rgba(99, 102, 241, 0.2)',
+                c1: '#10b981', c2: '#06b6d4', text: '#059669', textDark: '#34d399',
+                bg: 'rgba(209, 250, 229, 0.5)', bgDark: 'rgba(6, 78, 59, 0.3)',
+                bt: '#047857', btDark: '#34d399', bb: 'rgba(16, 185, 129, 0.2)', bbDark: 'rgba(16, 185, 129, 0.3)',
+                btnClass: 'border-emerald-500 text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20',
+                okVlans: ['2601']
+            },
+            switch: {
+                name: 'Найти свитчи', solid: '#2563eb', hover: '#3b82f6',
+                g1: 'rgba(37, 99, 235, 0.6)', g2: 'rgba(96, 165, 250, 0.4)', g3: 'rgba(139, 92, 246, 0.2)',
+                c1: '#3b82f6', c2: '#8b5cf6', text: '#2563eb', textDark: '#60a5fa',
+                bg: 'rgba(219, 234, 254, 0.5)', bgDark: 'rgba(30, 58, 138, 0.3)',
+                bt: '#1d4ed8', btDark: '#60a5fa', bb: 'rgba(37, 99, 235, 0.2)', bbDark: 'rgba(37, 99, 235, 0.3)',
+                btnClass: 'border-blue-500 text-blue-600 bg-blue-50/50 dark:bg-blue-950/20',
+                okVlans: ['2601']
+            },
+            host: {
+                name: 'Найти хосты', solid: '#d97706', hover: '#f59e0b',
+                g1: 'rgba(217, 119, 6, 0.6)', g2: 'rgba(245, 158, 11, 0.4)', g3: 'rgba(239, 68, 68, 0.2)',
+                c1: '#f59e0b', c2: '#ef4444', text: '#d97706', textDark: '#fbbf24',
+                bg: 'rgba(254, 243, 199, 0.5)', bgDark: 'rgba(120, 53, 4, 0.3)',
+                bt: '#b45309', btDark: '#fbbf24', bb: 'rgba(217, 119, 6, 0.2)', bbDark: 'rgba(217, 119, 6, 0.3)',
+                btnClass: 'border-amber-500 text-amber-600 bg-amber-50/50 dark:bg-amber-950/20',
+                okVlans: ['2601']
+            },
+            console: {
+                name: 'Найти консоли', solid: '#be123c', hover: '#e11d48',
+                g1: 'rgba(225, 29, 72, 0.6)', g2: 'rgba(244, 63, 94, 0.4)', g3: 'rgba(251, 113, 133, 0.2)',
+                c1: '#e11d48', c2: '#fda4af', text: '#be123c', textDark: '#fb7185',
+                bg: 'rgba(255, 228, 230, 0.5)', bgDark: 'rgba(159, 18, 57, 0.3)',
+                bt: '#9f1239', btDark: '#fda4af', bb: 'rgba(225, 29, 72, 0.2)', bbDark: 'rgba(225, 29, 72, 0.3)',
+                btnClass: 'border-rose-500 text-rose-600 bg-rose-50/50 dark:bg-rose-950/20',
+                okVlans: ['400', '600', '2600']
+            }
+        };
+
+        let currentMode = localStorage.getItem('search-mode') || 'pdu';
+        let activeResults = [];
+
+        const applyTheme = (mode) => {
+            currentMode = mode;
+            const t = themes[mode];
+            const s = document.documentElement.style;
+            
+            s.setProperty('--theme-solid', t.solid);
+            s.setProperty('--theme-hover', t.hover);
+            s.setProperty('--theme-glow-1', t.g1);
+            s.setProperty('--theme-glow-2', t.g2);
+            s.setProperty('--theme-glow-3', t.g3);
+            s.setProperty('--theme-conic-1', t.c1);
+            s.setProperty('--theme-conic-2', t.c2);
+            s.setProperty('--theme-text', t.text);
+            s.setProperty('--theme-text-dark', t.textDark);
+            s.setProperty('--theme-badge-bg', t.bg);
+            s.setProperty('--theme-badge-bg-dark', t.bgDark);
+            s.setProperty('--theme-badge-text', t.bt);
+            s.setProperty('--theme-badge-text-dark', t.btDark);
+            s.setProperty('--theme-badge-border', t.bb);
+            s.setProperty('--theme-badge-border-dark', t.bbDark);
+
+            ui.btn.querySelector('span').textContent = t.name;
+
+            ['pdu', 'switch', 'host', 'console'].forEach(m => {
+                const b = $(`mode-${m}`);
+                b.className = `px-3 py-1.5 rounded-lg border text-center font-medium bg-white dark:bg-zinc-950 transition-all text-xs focus:outline-none ${m === mode ? themes[m].btnClass : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/40'}`;
+            });
+
+            ui.prefixes.value = localStorage.getItem(`macs-${mode}`) || defaultPools[mode];
+            localStorage.setItem('search-mode', mode);
+        };
+
+        ui.prefixes.oninput = () => {
+            localStorage.setItem(`macs-${currentMode}`, ui.prefixes.value);
+        };
+
+        applyTheme(currentMode);
+
+        ['pdu', 'switch', 'host', 'console'].forEach(m => {
+            $(`mode-${m}`).onclick = () => applyTheme(m);
+        });
+
+        const show = (el, val) => el.classList.toggle('hidden', !val);
+
+        let tx = 0, ty = 0, cx = 0, cy = 0, active = false, frame = null;
+        if (ui.wrapper) {
+            const setCoords = e => {
+                const r = ui.wrapper.getBoundingClientRect();
+                tx = e.clientX - r.left; ty = e.clientY - r.top;
+            };
+            ui.wrapper.onmouseenter = e => {
+                active = true; setCoords(e); cx = tx; cy = ty;
+                if (!frame) frame = requestAnimationFrame(updateGlow);
+            };
+            ui.wrapper.onmousemove = setCoords;
+            ui.wrapper.onmouseleave = () => active = false;
+        }
+
+        function updateGlow() {
+            cx += (tx - cx) * 0.07; cy += (ty - cy) * 0.07;
+            ui.wrapper.style.setProperty('--mouse-x', `${cx}px`);
+            ui.wrapper.style.setProperty('--mouse-y', `${cy}px`);
+            if (!active && Math.abs(cx - tx) < 0.2 && Math.abs(cy - ty) < 0.2) frame = null;
+            else frame = requestAnimationFrame(updateGlow);
+        }
+
+        ui.logo.onclick = () => {
+            ui.input.value = '';
+            show(ui.resultsHeader, false);
+            show(ui.results, false);
+            ui.results.innerHTML = '';
+            show(ui.noRes, false); show(ui.err, false);
+            activeResults = [];
+        };
+
+        const tSun = $('themeToggleSun'), tMoon = $('themeToggleMoon');
+        const updateThemeUI = () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            tSun.classList.toggle('hidden', !isDark);
+            tMoon.classList.toggle('hidden', isDark);
+        };
+        updateThemeUI();
+
+        $('themeToggle').onclick = () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+            updateThemeUI();
+        };
+
+        async function copyCellText(text, el) {
+            try {
+                await navigator.clipboard.writeText(text);
+                const svg = el.querySelector('.copy-icon') || el;
+                const origSvg = svg.innerHTML;
+
+                svg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>`;
+                svg.classList.remove('opacity-0', 'text-zinc-400', 'dark:text-zinc-555');
+                svg.classList.add('text-[var(--theme-text)]', 'dark:text-[var(--theme-text-dark)]', 'opacity-100');
+
+                setTimeout(() => {
+                    svg.innerHTML = origSvg;
+                    svg.classList.remove('text-[var(--theme-text)]', 'dark:text-[var(--theme-text-dark)]', 'opacity-100');
+                    svg.classList.add('opacity-0', 'text-zinc-400', 'dark:text-zinc-555');
+                }, 1000);
+            } catch (err) { console.error('Ошибка копирования:', err); }
+        }
+
+        const makeClickable = (val, label, copy = null) => {
+            if (!val || val === "—") return "—";
+            const safe = (copy || val).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return `<div class="group inline-flex items-center gap-1.5">
+                <span class="select-text">${val}</span>
+                <span onclick="copyCellText('${safe}', this)" class="cursor-pointer p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-colors duration-150" title="Скопировать ${label}">
+                    <svg class="w-3.5 h-3.5 copy-icon opacity-0 group-hover:opacity-100 text-zinc-400 dark:text-zinc-555 transition-opacity duration-150" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </span>
+            </div>`;
+        };
+
+        const makeVlanCell = (val, objId, swName) => {
+            if (!val || val === "—") return "—";
+            const safeVal = val.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const href = objId 
+                ? `https://racktables.yandex-team.ru/index.php?page=object&tab=8021qports&object_id=${objId}`
+                : `https://racktables.yandex-team.ru/index.php?page=search&q=${encodeURIComponent(swName)}`;
+            
+            return `<div class="group inline-flex items-center gap-1.5">
+                <a href="${href}" target="_blank" rel="noopener noreferrer" class="hover:text-[var(--theme-text)] dark:hover:text-[var(--theme-text-dark)] hover:underline transition-colors duration-150" title="Перейти к коммутатору в Racktables">
+                    <span>${val}</span>
+                </a>
+                <span onclick="copyCellText('${safeVal}', this)" class="cursor-pointer p-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-colors duration-150" title="Скопировать VLAN">
+                    <svg class="w-3.5 h-3.5 copy-icon opacity-0 group-hover:opacity-100 text-zinc-400 dark:text-zinc-555 transition-opacity duration-150" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </span>
+            </div>`;
+        };
+
+        const closeExport = () => show($('exportModal'), false);
+        $('closeExportBtn').onclick = closeExport;
+        $('cancelExportBtn').onclick = closeExport;
+
+        ui.exportBtn.onclick = () => {
+            const list = $('exportSwitchesList');
+            list.innerHTML = '';
+            activeResults.forEach((res, idx) => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2.5 cursor-pointer py-1 hover:text-zinc-900 dark:hover:text-white transition-colors";
+                const displayInv = res.inv !== "—" ? ` [инв. ${res.inv}]` : '';
+                label.innerHTML = `
+                    <input type="checkbox" name="exportSwitchItem" value="${idx}" checked class="rounded border-zinc-300 dark:border-zinc-700 text-[var(--theme-solid)] focus:ring-[var(--theme-solid)] dark:bg-zinc-900 dark:checked:bg-[var(--theme-solid)]">
+                    <span>${res.fqdn}${displayInv} (${res.items.length})</span>
+                `;
+                list.appendChild(label);
+            });
+            show($('exportModal'), true);
+        };
+
+        $('exportSelectAll').onclick = () => {
+            document.querySelectorAll('input[name="exportSwitchItem"]').forEach(i => i.checked = true);
+        };
+
+        $('exportSelectNone').onclick = () => {
+            document.querySelectorAll('input[name="exportSwitchItem"]').forEach(i => i.checked = false);
+        };
+
+        $('confirmExportBtn').onclick = () => {
+            const selectedIndices = Array.from(document.querySelectorAll('input[name="exportSwitchItem"]:checked')).map(i => parseInt(i.value));
+            const selectedCols = Array.from(document.querySelectorAll('input[name="exportColumn"]:checked')).map(i => i.value);
+
+            if (!selectedIndices.length || !selectedCols.length) return;
+
+            const format = document.querySelector('input[name="exportFormat"]:checked').value;
+            const dataToExport = activeResults.filter((_, idx) => selectedIndices.includes(idx));
+
+            const headersMap = { fqdn: 'FQDN', inv: 'Inventory', vlan: 'VLAN', mac: 'MAC', port: 'Port' };
+            let content = '';
+            let mimeType = 'text/plain';
+            let filename = `ariadna_export_${new Date().toISOString().slice(0,10)}`;
+
+            if (format === 'json') {
+                const cleanJson = dataToExport.map(res => {
+                    const obj = {};
+                    if (selectedCols.includes('fqdn')) obj.fqdn = res.fqdn;
+                    if (selectedCols.includes('inv')) obj.inv = res.inv;
+                    obj.items = res.items.map(item => {
+                        const cleanItem = {};
+                        if (selectedCols.includes('vlan')) cleanItem.vlan = item.vlan;
+                        if (selectedCols.includes('mac')) cleanItem.mac = item.mac;
+                        if (selectedCols.includes('port')) cleanItem.port = item.port;
+                        return cleanItem;
+                    });
+                    return obj;
+                });
+                content = JSON.stringify(cleanJson, null, 2);
+                mimeType = 'application/json';
+                filename += '.json';
+            } else if (format === 'csv') {
+                mimeType = 'text/csv;charset=utf-8;';
+                filename += '.csv';
+                let csvRows = [selectedCols.map(col => headersMap[col]).join(';')];
+                dataToExport.forEach(res => {
+                    res.items.forEach(item => {
+                        const row = [];
+                        if (selectedCols.includes('fqdn')) row.push(res.fqdn);
+                        if (selectedCols.includes('inv')) row.push(res.inv);
+                        if (selectedCols.includes('vlan')) row.push(item.vlan);
+                        if (selectedCols.includes('mac')) row.push(item.mac);
+                        if (selectedCols.includes('port')) row.push(item.port);
+                        csvRows.push(row.join(';'));
+                    });
+                });
+                content = '\uFEFF' + csvRows.join('\r\n');
+            } else if (format === 'txt') {
+                mimeType = 'text/plain;charset=utf-8;';
+                filename += '.txt';
+                let txtRows = [selectedCols.map(col => headersMap[col]).join('\t')];
+                dataToExport.forEach(res => {
+                    res.items.forEach(item => {
+                        const row = [];
+                        if (selectedCols.includes('fqdn')) row.push(res.fqdn);
+                        if (selectedCols.includes('inv')) row.push(res.inv);
+                        if (selectedCols.includes('vlan')) row.push(item.vlan);
+                        if (selectedCols.includes('mac')) row.push(item.mac);
+                        if (selectedCols.includes('port')) row.push(item.port);
+                        txtRows.push(row.join('\t'));
+                    });
+                });
+                content = txtRows.join('\r\n');
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            closeExport();
+        };
+
+        $('searchForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const raw = ui.input.value.trim();
+            const prefixes = ui.prefixes.value.split(',').map(p => p.trim().toLowerCase().replace(/[^a-f0-9]/g, '')).filter(Boolean);
+
+            if (!raw || !prefixes.length) return;
+
+            const targets = Array.from(new Set(raw.split(/[\s,;]+/).filter(Boolean)));
+            if (!targets.length) return;
+
+            ui.btn.disabled = true;
+            show(ui.err, false);
+            show(ui.resultsHeader, false);
+            show(ui.results, false);
+            ui.results.innerHTML = '';
+            show(ui.noRes, false);
+            activeResults = [];
+
+            let globalErrors = [];
+            let totalFound = 0;
+            const seenSwitches = new Set();
+
+            const searchPromises = targets.map(async (switchQuery) => {
+                let target = switchQuery, suffix = '', invNum = '—';
+                if (/^\d+$/.test(switchQuery)) {
+                    invNum = switchQuery;
+                    const res = await fetch(`https://bot.yandex-team.ru/api/consistof.php/?inv=${switchQuery}&format=json`).catch(() => {
+                        throw new Error(`Не удалось связаться с Bot API для инв. ${switchQuery}`);
+                    });
+                    if (!res.ok) throw new Error(`Bot API вернул ошибку для инв. ${switchQuery}: ${res.status}`);
+                    const botData = await res.json();
+                    const fqdn = botData?.data?.XXCSI_FQDN;
+                    if (!fqdn) throw new Error(`Для инвентарного номера ${switchQuery} не найден параметр XXCSI_FQDN.`);
+                    target = fqdn; suffix = ` (инв. ${switchQuery})`;
+                }
+
+                const fullFqdn = target.includes('.') ? target : `${target}.yandex-team.ru`;
+                const swName = target.toLowerCase().replace(/\.(yandex-team\.ru|yandex\.net|yndx\.net)$/, '').trim();
+
+                const [macRes, objSearchRes] = await Promise.all([
+                    fetch(`https://racktables.yandex-team.ru/export/get-maclist.php?device=${encodeURIComponent(swName)}`).catch(() => {
+                        throw new Error(`Не удалось связаться с Racktables для устройства ${swName}`);
+                    }),
+                    fetch(`https://racktables.yandex-team.ru/index.php?page=search&q=${encodeURIComponent(swName)}`).catch(() => null)
+                ]);
+
+                if (!macRes.ok) throw new Error(`Racktables вернул ошибку для ${swName}: ${macRes.status}`);
+
+                let objId = null;
+                if (objSearchRes) {
+                    const urlMatch = objSearchRes.url.match(/[?&]object_id=(\d+)/i);
+                    if (urlMatch) {
+                        objId = urlMatch[1];
+                    } else {
+                        const html = await objSearchRes.text().catch(() => '');
+                        objId = html.match(/object_id=(\d+)/i)?.[1];
+                    }
+                }
+
+                const text = await macRes.text();
+                if (!text?.trim()) throw new Error(`Racktables вернул пустой ответ для устройства "${swName}".`);
+
+                return { swName, suffix, text, objId, invNum, fullFqdn };
+            });
+
+            const settledResults = await Promise.allSettled(searchPromises);
+
+            settledResults.forEach((result, idx) => {
+                if (result.status === 'rejected') {
+                    globalErrors.push(result.reason.message || result.reason);
+                    return;
+                }
+
+                const { swName, suffix, text, objId, invNum, fullFqdn } = result.value;
+                if (seenSwitches.has(swName)) return;
+                seenSwitches.add(swName);
+
+                const portVlans = {};
+                const parsed = text.split('\n').filter(Boolean).map(line => {
+                    const parts = line.trim().split(/\s+/);
+                    let vlan = "—", mac = "—", port = "—";
+                    const normLine = line.toLowerCase().replace(/[^a-f0-9]/g, '');
+                    const matched = prefixes.find(p => normLine.includes(p));
+
+                    parts.forEach(part => {
+                        const normPart = part.toLowerCase().replace(/[^a-f0-9]/g, '');
+                        if (matched && normPart.includes(matched)) mac = part;
+                        else if (part.includes('/') || /^(gi|fa|eth|xe)/i.test(part)) port = part;
+                        else if (/^\d+$/.test(part) && parseInt(part) < 4096) vlan = part;
+                    });
+
+                    if (matched && mac === "—" && parts.length > 1) mac = parts[1];
+                    if (port === "—" && parts.length) port = parts[parts.length - 1];
+
+                    if (port !== "—" && vlan !== "—") {
+                        (portVlans[port] ??= new Set()).add(vlan);
+                    }
+                    return { vlan, mac, port, matched, line: line.trim() };
+                });
+
+                const vMap = vendorMaps[currentMode] || {};
+                const okVlans = themes[currentMode].okVlans || ['2601'];
+
+                let foundInSwitch = 0;
+                const rows = [];
+                const switchExportItem = {
+                    fqdn: fullFqdn,
+                    inv: invNum,
+                    items: []
+                };
+
+                parsed.forEach(item => {
+                    if (!item.matched) return;
+                    if (item.port !== "—" && portVlans[item.port]?.size > 1) return;
+
+                    foundInSwitch++;
+                    totalFound++;
+
+                    switchExportItem.items.push({
+                        vlan: item.vlan,
+                        mac: item.mac,
+                        port: item.port
+                    });
+                    
+                    const isDiffVlan = item.vlan !== "—" && !okVlans.includes(item.vlan);
+                    const vClass = isDiffVlan ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-zinc-900 dark:text-zinc-100 font-medium";
+                    const vendorLabel = vMap[item.matched] ? ` · ${vMap[item.matched]}` : '';
+
+                    rows.push(`
+                        <tr class="hover:bg-zinc-100 dark:hover:bg-zinc-800/40 transition-colors duration-100">
+                            <td class="px-6 py-4 whitespace-nowrap"><span class="${vClass}">${makeVlanCell(item.vlan, objId, swName)}</span></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-zinc-900 dark:text-zinc-200 font-semibold">${makeClickable(item.mac, 'MAC-адрес')}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-zinc-900 dark:text-zinc-200 font-semibold">${makeClickable(item.port, 'порт')}</td>
+                            <td class="px-6 py-4 whitespace-nowrap"><span class="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded text-[10px] font-mono">${item.matched}${vendorLabel}</span></td>
+                            <td class="px-6 py-4 text-zinc-400 dark:text-zinc-555 max-w-xs truncate">${makeClickable(item.line, 'строку целиком', item.line)}</td>
+                        </tr>
+                    `);
+                });
+
+                if (foundInSwitch > 0) {
+                    activeResults.push(switchExportItem);
+                    const switchBlock = document.createElement('div');
+                    switchBlock.className = "bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm overflow-hidden transition-all duration-300 animate-results";
+                    switchBlock.innerHTML = `
+                        <div class="px-6 py-4 bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                            <h2 class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Результаты для: <span class="text-zinc-900 dark:text-white font-semibold font-mono">${swName + suffix}</span></h2>
+                            <span class="bg-[var(--theme-badge-bg)] dark:bg-[var(--theme-badge-bg-dark)] text-[var(--theme-badge-text)] dark:text-[var(--theme-badge-text-dark)] border border-[var(--theme-badge-border)] dark:border-[var(--theme-badge-border-dark)] text-[11px] font-medium px-2.5 py-0.5 rounded-full">Найдено: ${foundInSwitch}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
+                                <thead class="bg-zinc-50/50 dark:bg-zinc-900/30">
+                                    <tr>
+                                        <th class="px-6 py-3.5 text-left text-[11px] font-medium text-zinc-400 dark:text-zinc-555 uppercase tracking-wider">VLAN</th>
+                                        <th class="px-6 py-3.5 text-left text-[11px] font-medium text-zinc-400 dark:text-zinc-555 uppercase tracking-wider">MAC-адрес</th>
+                                        <th class="px-6 py-3.5 text-left text-[11px] font-medium text-zinc-400 dark:text-zinc-555 uppercase tracking-wider">Порт</th>
+                                        <th class="px-6 py-3.5 text-left text-[11px] font-medium text-zinc-400 dark:text-zinc-555 uppercase tracking-wider">Маска</th>
+                                        <th class="px-6 py-3.5 text-left text-[11px] font-medium text-zinc-400 dark:text-zinc-555 uppercase tracking-wider">Сырая строка</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800 font-mono text-xs">
+                                    ${rows.join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    ui.results.appendChild(switchBlock);
+                }
+            });
+
+            if (globalErrors.length > 0) {
+                ui.errTitle.textContent = "Произошли ошибки при выполнении части запросов";
+                ui.errMsg.innerHTML = globalErrors.join('<br>');
+                show(ui.err, true);
+            }
+
+            if (totalFound > 0) {
+                ui.totalCount.textContent = `Найдено: ${totalFound}`;
+                show(ui.resultsHeader, true);
+                show(ui.results, true);
+            } else {
+                show(ui.noRes, true);
+            }
+
+            ui.btn.disabled = false;
+        };
+    </script>
+</body>
+</html>
